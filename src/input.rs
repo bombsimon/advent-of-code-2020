@@ -18,3 +18,11 @@ pub fn string_vec_to_int_vec<S: AsRef<str>>(vec: &[S]) -> Vec<i32> {
         .filter_map(|x| x.as_ref().parse::<i32>().ok())
         .collect()
 }
+
+#[cfg(test)]
+pub fn string_to_vec(s: &str) -> Vec<String> {
+    s.split("\n")
+        .filter(|&x| x != "")
+        .map(|x| x.to_string())
+        .collect::<Vec<_>>()
+}
