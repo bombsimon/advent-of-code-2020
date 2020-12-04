@@ -2,7 +2,7 @@ use regex::Regex;
 
 use crate::input;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 struct Passport {
     byr: Option<String>,
     iyr: Option<String>,
@@ -12,21 +12,6 @@ struct Passport {
     ecl: Option<String>,
     pid: Option<String>,
     cid: Option<String>,
-}
-
-impl Passport {
-    fn new() -> Passport {
-        Passport {
-            byr: None,
-            iyr: None,
-            eyr: None,
-            hgt: None,
-            hcl: None,
-            ecl: None,
-            pid: None,
-            cid: None,
-        }
-    }
 }
 
 pub fn solve() {
@@ -49,7 +34,7 @@ fn parse_file(vec: Vec<String>) -> Vec<Passport> {
         .collect();
 
     for group in groups {
-        let mut passport = Passport::new();
+        let mut passport = Passport::default();
 
         for pair in group.split(" ") {
             let kv: Vec<&str> = pair.split(":").collect();
@@ -119,7 +104,11 @@ fn valid_passport(p: Passport, strict: bool) -> bool {
         }
 
         let hgt_re = Regex::new(r"^(\d{2,3})(in|cm)$").unwrap();
-        let captures = hgt_re.captures(hgt.as_str()).unwrap();
+        let captures = match hgt_re.captures(hgt.as_str()) {
+            Some(c) => c,
+            None => return false,
+        };
+
         if captures.len() != 3 {
             return false;
         }
