@@ -105,13 +105,13 @@ mod tests {
 
     #[test]
     fn part_one() {
-        let x = parse_file(input::string_to_vec(TEST_INPUT));
+        let x = parse_file(input::string_to_vec(TEST_INPUT, false));
         assert_eq!(super::part_one(x), SOLUTION_ONE);
     }
 
     #[test]
     fn part_two() {
-        let x = parse_file(input::string_to_vec(TEST_INPUT));
+        let x = parse_file(input::string_to_vec(TEST_INPUT, false));
         assert_eq!(super::part_two(x), SOLUTION_TWO);
     }
 }

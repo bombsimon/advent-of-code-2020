@@ -92,7 +92,7 @@ mod tests {
 
     #[test]
     fn part_one() {
-        let x = input::string_to_vec(TEST_INPUT);
+        let x = input::string_to_vec(TEST_INPUT, false);
         let map = parse_file(x);
 
         assert_eq!(super::part_one(map), SOLUTION_ONE);
@@ -100,7 +100,7 @@ mod tests {
 
     #[test]
     fn part_two() {
-        let x = input::string_to_vec(TEST_INPUT);
+        let x = input::string_to_vec(TEST_INPUT, false);
         let map = parse_file(x);
 
         assert_eq!(super::part_two(map), SOLUTION_TWO);
