@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use crate::input;
 
 pub fn solve() {
@@ -13,46 +11,37 @@ fn part_one(input: String) -> i64 {
     input
         .split("\n\n")
         .map(|l| {
-            let mut s = l
-                .split_whitespace()
-                .collect::<String>()
+            let mut x = l
                 .chars()
+                .filter(|&c| !c.is_whitespace())
                 .collect::<Vec<_>>();
-            s.sort();
-            s.dedup();
-            s.len() as i64
+            x.sort();
+            x.dedup();
+            x.len() as i64
         })
-        .fold(0, |acc, i| acc + i)
+        .sum()
 }
 
 fn part_two(input: String) -> i64 {
     input
         .split("\n\n")
         .map(|l| {
-            let mut all_yeses = 0;
-            let rows = l.split_whitespace().collect::<Vec<_>>();
-            let mut counts: BTreeMap<char, usize> = BTreeMap::new();
+            let mut all_rows = l.lines().filter(|&c| c != "");
+            let mut shared_responses = all_rows.next().unwrap().chars().collect::<Vec<_>>();
 
-            for row in rows.iter() {
-                for c in row.chars() {
-                    *counts.entry(c.into()).or_insert(0) += 1;
-                }
+            for row in all_rows {
+                shared_responses.retain(|&a| row.contains(a));
             }
 
-            for (_, count) in counts.iter() {
-                if *count == rows.len() {
-                    all_yeses += 1;
-                }
-            }
-
-            all_yeses
+            shared_responses.len() as i64
         })
-        .fold(0, |acc, i| acc + i)
+        .sum()
 }
 
 #[cfg(test)]
 mod tests {
-    static TEST_INPUT_ONE: &str = r#"abc
+    static TEST_INPUT: &str = r#"
+abc
 
 a
 b
@@ -66,33 +55,19 @@ a
 a
 a
 
-b"#;
-    static TEST_INPUT_TWO: &str = r#"abc
-
-a
 b
-c
-
-ab
-ac
-
-a
-a
-a
-a
-
-b"#;
+"#;
 
     static SOLUTION_ONE: i64 = 11;
     static SOLUTION_TWO: i64 = 6;
 
     #[test]
     fn part_one() {
-        assert_eq!(super::part_one(TEST_INPUT_ONE.to_string()), SOLUTION_ONE);
+        assert_eq!(super::part_one(TEST_INPUT.to_string()), SOLUTION_ONE);
     }
 
     #[test]
     fn part_two() {
-        assert_eq!(super::part_two(TEST_INPUT_TWO.to_string()), SOLUTION_TWO);
+        assert_eq!(super::part_two(TEST_INPUT.to_string()), SOLUTION_TWO);
     }
 }
