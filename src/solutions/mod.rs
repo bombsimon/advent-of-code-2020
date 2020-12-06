@@ -4,6 +4,7 @@ mod day03;
 mod day04;
 mod day05;
 mod day05_alt;
+mod day06;
 
 pub fn solution_for(day: i32) {
     println!("Showing solution for day {}\n", day);
@@ -20,6 +21,7 @@ pub fn solution_for(day: i32) {
             println!("\nSolution #2");
             day05_alt::solve();
         }
+        6 => day06::solve(),
         d => panic!(format!("Day {} not implemented", d)),
     }
 }
