@@ -2,12 +2,6 @@ use crate::input;
 
 use std::collections::HashMap;
 
-#[derive(Clone, Debug)]
-struct Content {
-    color: String,
-    amount: i32,
-}
-
 pub fn solve() {
     let x = input::file_for_day(7).join("\n");
     let input = parse_input(x);
@@ -16,7 +10,7 @@ pub fn solve() {
     println!("Solution part 2: {}", part_two(&input));
 }
 
-fn parse_input(input: String) -> HashMap<String, Vec<Content>> {
+fn parse_input(input: String) -> HashMap<String, Vec<(usize, String)>> {
     let mut b = HashMap::new();
 
     for l in input.lines().filter(|&c| c != "") {
@@ -26,7 +20,7 @@ fn parse_input(input: String) -> HashMap<String, Vec<Content>> {
         let outer_bag_color = parts.next().unwrap().to_string();
         let contents = parts.next().unwrap();
 
-        let mut map_content: Vec<Content> = Vec::new();
+        let mut map_content = Vec::new();
 
         if contents == "no other bags." {
             b.insert(outer_bag_color, map_content);
@@ -36,14 +30,10 @@ fn parse_input(input: String) -> HashMap<String, Vec<Content>> {
         // Iterate over each group of bags.
         for content in contents.split(",") {
             let mut content_parts = content.split_whitespace();
-            let amount = content_parts.next().unwrap().parse::<i32>().unwrap();
-
+            let amount = content_parts.next().unwrap().parse::<usize>().unwrap();
             let content_color = content_parts.take(2).collect::<Vec<_>>().join(" ");
 
-            map_content.push(Content {
-                color: content_color,
-                amount,
-            });
+            map_content.push((amount, content_color));
         }
 
         b.insert(outer_bag_color, map_content);
@@ -52,27 +42,45 @@ fn parse_input(input: String) -> HashMap<String, Vec<Content>> {
     b
 }
 
-fn part_one(input: &HashMap<String, Vec<Content>>) -> i64 {
-    // Recursive function to follow a bags content until "shiny gold" is found.
-    fn has_gold(contents: &Vec<Content>, b: &HashMap<String, Vec<Content>>) -> bool {
-        for content in contents {
-            if content.color == "shiny gold" {
-                return true;
-            }
-
-            match b.get(&content.color) {
-                Some(c) => {
-                    if has_gold(&c, b) {
-                        return true;
-                    }
-                }
-                None => continue,
-            };
+// Recursive function to follow a bags content until "shiny gold" is found.
+fn has_gold(contents: &Vec<(usize, String)>, b: &HashMap<String, Vec<(usize, String)>>) -> bool {
+    for (_, color) in contents {
+        if color == &"shiny gold" {
+            return true;
         }
 
-        false
-    };
+        match b.get(color) {
+            Some(c) => {
+                if has_gold(&c, b) {
+                    return true;
+                }
+            }
+            None => continue,
+        };
+    }
 
+    false
+}
+
+// Recursive function to the number of bags found as content until no more bags are found.
+fn get_count(contents: &Vec<(usize, String)>, b: &HashMap<String, Vec<(usize, String)>>) -> usize {
+    let mut sum = 0;
+
+    for (amount, color) in contents {
+        sum += amount;
+
+        match b.get(color) {
+            Some(c) => {
+                sum += get_count(&c, b) * amount;
+            }
+            None => continue,
+        };
+    }
+
+    sum
+}
+
+fn part_one(input: &HashMap<String, Vec<(usize, String)>>) -> i64 {
     // Each color and it's content represents one line in the file (no duplicates) so iterate over
     // them and do a recursive check for "shiny gold".
     input.iter().fold(
@@ -81,30 +89,8 @@ fn part_one(input: &HashMap<String, Vec<Content>>) -> i64 {
     )
 }
 
-fn part_two(input: &HashMap<String, Vec<Content>>) -> i64 {
-    // Recursive function to the number of bags found as content until no more bags are found.
-    fn get_count(contents: &Vec<Content>, b: &HashMap<String, Vec<Content>>) -> i32 {
-        let mut sum = 0;
-
-        for content in contents {
-            sum += content.amount;
-
-            match b.get(&content.color) {
-                Some(c) => {
-                    sum += get_count(&c, b) * content.amount;
-                }
-                None => continue,
-            };
-        }
-
-        sum
-    };
-
-    let gold_content = input
-        .get(&"shiny gold".to_string())
-        .expect("no shiny gold in input");
-
-    get_count(&gold_content, input) as i64
+fn part_two(input: &HashMap<String, Vec<(usize, String)>>) -> i64 {
+    get_count(input.get(&"shiny gold".to_string()).unwrap(), input) as i64
 }
 
 #[cfg(test)]
