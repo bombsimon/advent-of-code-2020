@@ -43,3 +43,30 @@ fn part_two(vec: &mut Vec<i64>) -> i64 {
 
     -1
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    static TEST_INPUT_ONE: &str = r#"
+FBFBBFFRLR
+BFFFBBFRRR
+FFFBBBFRRR
+BBFFBBFRLL
+"#;
+
+    static SOLUTION_ONE: i64 = 820;
+
+    #[test]
+    fn part_one() {
+        let x = input::string_to_vec(TEST_INPUT_ONE, false);
+        let l = parse_file(x);
+
+        assert_eq!(super::part_one(&l), SOLUTION_ONE);
+    }
+
+    #[test]
+    fn part_two() {
+        assert_eq!(1, 1);
+    }
+}
