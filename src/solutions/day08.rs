@@ -54,10 +54,14 @@ impl StateMachine {
         self.pos = i as usize;
     }
 
-    fn change_instruction(&mut self, from: String, to: String, after: usize) {
+    fn reset(&mut self) {
         self.program = self.original_program.clone();
         self.acc = 0;
         self.visited = HashMap::new();
+    }
+
+    fn change_instruction(&mut self, from: String, to: String, after: usize) -> bool {
+        self.reset();
 
         let mut seen = 1usize;
 
@@ -65,12 +69,14 @@ impl StateMachine {
             if ins == &from {
                 if seen == after {
                     *ins = to;
-                    break;
+                    return true;
                 } else {
                     seen += 1;
                 }
             }
         }
+
+        false
     }
 
     fn did_complete(&self) -> bool {
@@ -96,12 +102,24 @@ fn part_two(input: String) -> i64 {
     let mut sm = StateMachine::new(input);
     let mut tries = 1;
 
-    sm.run();
+    let changes = vec![("jmp", "nop"), ("nop", "jmp")];
 
-    while !sm.did_complete() {
-        sm.change_instruction("jmp".to_string(), "nop".to_string(), tries);
-        sm.run();
-        tries += 1;
+    for (from, to) in changes {
+        while !sm.did_complete() {
+            let had_changes = sm.change_instruction(from.to_string(), to.to_string(), tries);
+
+            // Break out of while loop if no changes was made.
+            if !had_changes {
+                break;
+            }
+
+            sm.run();
+            tries += 1;
+        }
+
+        if sm.did_complete() {
+            break;
+        }
     }
 
     sm.acc as i64
