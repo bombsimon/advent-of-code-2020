@@ -8,13 +8,9 @@ pub fn solve() {
 }
 
 fn sum_in_list(n: i64, list: &[i64]) -> bool {
-    for i in list.iter() {
-        for j in list.iter() {
-            if i == j {
-                continue;
-            }
-
-            if i + j == n {
+    for i in 0..list.len() {
+        for j in i + 1..list.len() {
+            if list[i] + list[j] == n {
                 return true;
             }
         }
@@ -23,26 +19,24 @@ fn sum_in_list(n: i64, list: &[i64]) -> bool {
     false
 }
 
-fn find_sum(n: i64, list: &[i64]) -> &[i64] {
+fn sum_in_sequence(target: i64, list: &[i64]) -> &[i64] {
     for i in 0..list.len() {
-        let mut j = i + 1;
+        let mut sum: i64 = list[i];
 
-        loop {
-            let sum: i64 = list[i..j].into_iter().sum();
+        for j in i + 1..list.len() {
+            sum += list[j];
 
-            if sum == n {
+            if sum == target {
                 return &list[i..j];
             }
 
-            if sum > n {
+            if sum > target {
                 break;
             }
-
-            j += 1;
         }
     }
 
-    &list[0..1]
+    &[0, 0]
 }
 
 fn part_one(input: String, preamble: usize) -> i64 {
@@ -73,9 +67,13 @@ fn part_two(input: String, preamble: usize) -> i64 {
         let subset = &numbers[i - preamble..i];
 
         if !sum_in_list(sum, subset) {
-            let bf = find_sum(sum, &numbers);
+            let seq = sum_in_sequence(sum, &numbers);
 
-            return bf.into_iter().min().unwrap() + bf.into_iter().max().unwrap();
+            let (min, max) = seq
+                .iter()
+                .fold((sum, 0), |(min, max), &n| (min.min(n), max.max(n)));
+
+            return min + max;
         }
     }
 
