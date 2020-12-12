@@ -1,5 +1,7 @@
 use std::env;
 
+pub mod grid;
+
 mod input;
 mod solutions;
 
