@@ -2,46 +2,28 @@ use crate::{grid::Direction, input};
 
 #[derive(Clone, Debug)]
 struct Walker {
-    instructions: Vec<(Direction, usize)>,
+    instructions: Vec<(Direction, isize)>,
     instructions_ptr: usize,
     facing: Direction,
-    start_x: usize,
-    start_y: usize,
-    x: usize,
-    y: usize,
+    waypoint: (isize, isize),
+    coordinates: (isize, isize),
 }
 
 impl Walker {
-    fn new(instructions: Vec<(Direction, usize)>) -> Self {
+    fn new(instructions: Vec<(Direction, isize)>) -> Self {
         Walker {
             instructions,
             instructions_ptr: 0usize,
             facing: Direction::East,
-            start_x: 1000,
-            start_y: 1000,
-            x: 1000,
-            y: 1000,
+            waypoint: (-1, 10),
+            coordinates: (0, 0),
         }
-    }
-
-    #[allow(dead_code)]
-    fn debug_and_wait(&self) {
-        println!("{}", self);
-        print!("PRESS ENTER TO CONTINUE");
-
-        use std::io::{stdin, stdout, Write};
-
-        let mut s = String::new();
-        let _ = stdout().flush();
-        stdin()
-            .read_line(&mut s)
-            .expect("Did not enter a correct string");
     }
 
     fn next(&mut self) {
         let (ins, len) = self.instructions[self.instructions_ptr];
-        let (new_x, new_y) = match ins {
-            Direction::Unknown('F') => self.facing.next_from(self.x, self.y, len),
+        let new_coordinates = match ins {
+            Direction::Unknown('F') => self.facing.next_from(self.coordinates, len),
             Direction::Unknown('L') => {
                 // Just turn right and another 180 degrees
                 if len != 180 {
@@ -57,11 +39,37 @@ impl Walker {
                 self.instructions_ptr += 1;
                 return;
             }
-            direction => direction.next_from(self.x, self.y, len as usize),
+            direction => direction.next_from(self.coordinates, len as isize),
         };
 
-        self.x = new_x;
-        self.y = new_y;
+        self.coordinates = new_coordinates;
+        self.instructions_ptr += 1;
+    }
+
+    fn next_with_waypoint(&mut self) {
+        let (ins, len) = self.instructions[self.instructions_ptr];
+        match ins {
+            Direction::Unknown('F') => {
+                for _ in 0..len {
+                    self.coordinates.0 += self.waypoint.0;
+                    self.coordinates.1 += self.waypoint.1;
+                }
+            }
+            Direction::Unknown('L') => {
+                for _ in 0..len / 90 {
+                    self.waypoint = (-self.waypoint.1, self.waypoint.0)
+                }
+            }
+            Direction::Unknown('R') => {
+                for _ in 0..len / 90 {
+                    self.waypoint = (self.waypoint.1, -self.waypoint.0)
+                }
+            }
+            direction => {
+                self.waypoint = direction.next_from(self.waypoint, len);
+            }
+        };
+
         self.instructions_ptr += 1;
     }
 
@@ -69,9 +77,8 @@ impl Walker {
         self.instructions_ptr == self.instructions.len()
     }
 
-    #[allow(dead_code)]
     fn manhattan(&self) -> i32 {
-        (self.start_x as i32 - self.x as i32).abs() + (self.start_y as i32 - self.y as i32).abs()
+        (0i32 - self.coordinates.0 as i32).abs() + (0i32 - self.coordinates.1 as i32).abs()
     }
 }
 
@@ -79,8 +86,8 @@ impl std::fmt::Display for Walker {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "at x: {}, y: {}, facing: {:?}",
-            self.x, self.y, self.facing
+            "at x: {}, y: {}, facing: {:?}, waypoint x: {}, waypoint y: {}",
+            self.coordinates.0, self.coordinates.1, self.facing, self.waypoint.0, self.waypoint.1,
         )
     }
 }
@@ -98,14 +105,13 @@ fn part_one(input: String) -> i32 {
         .filter(|&c| c != "")
         .map(|l| {
             let ins = l.chars().next().unwrap();
-            let len = l.get(1..).unwrap().parse::<usize>().unwrap();
+            let len = l.get(1..).unwrap().parse::<isize>().unwrap();
 
             (Direction::from(ins), len)
         })
-        .collect::<Vec<(Direction, usize)>>();
+        .collect::<Vec<(Direction, isize)>>();
 
     let mut walker = Walker::new(sequence);
-
     while !walker.done() {
         walker.next();
     }
@@ -113,30 +119,45 @@ fn part_one(input: String) -> i32 {
     walker.manhattan()
 }
 
-fn part_two(_input: String) -> i32 {
-    -1
+fn part_two(input: String) -> i32 {
+    let sequence = input
+        .lines()
+        .filter(|&c| c != "")
+        .map(|l| {
+            let ins = l.chars().next().unwrap();
+            let len = l.get(1..).unwrap().parse::<isize>().unwrap();
+
+            (Direction::from(ins), len)
+        })
+        .collect::<Vec<(Direction, isize)>>();
+
+    let mut walker = Walker::new(sequence);
+    while !walker.done() {
+        walker.next_with_waypoint();
+    }
+
+    walker.manhattan()
 }
 
 #[cfg(test)]
 mod tests {
-    static TEST_INPUT_ONE: &str = r#"
+    static TEST_INPUT: &str = r#"
 F10
 N3
 F7
 R90
 F11"#;
-    static TEST_INPUT_TWO: &str = r#""#;
 
     static SOLUTION_ONE: i32 = 25;
-    static SOLUTION_TWO: i32 = -1;
+    static SOLUTION_TWO: i32 = 286;
 
     #[test]
     fn part_one() {
-        assert_eq!(super::part_one(TEST_INPUT_ONE.to_string()), SOLUTION_ONE);
+        assert_eq!(super::part_one(TEST_INPUT.to_string()), SOLUTION_ONE);
     }
 
     #[test]
     fn part_two() {
-        assert_eq!(super::part_two(TEST_INPUT_TWO.to_string()), SOLUTION_TWO);
+        assert_eq!(super::part_two(TEST_INPUT.to_string()), SOLUTION_TWO);
     }
 }

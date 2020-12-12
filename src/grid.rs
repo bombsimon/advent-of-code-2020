@@ -20,7 +20,7 @@ impl From<char> for Direction {
 }
 
 impl Direction {
-    pub fn turn_deegrees(&self, degrees: usize) -> Self {
+    pub fn turn_deegrees(&self, degrees: isize) -> Self {
         match self {
             Direction::North => match degrees {
                 90 => Direction::East,
@@ -50,7 +50,9 @@ impl Direction {
         }
     }
 
-    pub fn next_from(&self, x: usize, y: usize, distance: usize) -> (usize, usize) {
+    pub fn next_from(&self, coordinates: (isize, isize), distance: isize) -> (isize, isize) {
+        let (x, y) = coordinates;
+
         match self {
             Direction::North => (x - distance, y),
             Direction::West => (x, y - distance),
