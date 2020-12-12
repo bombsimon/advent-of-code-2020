@@ -18,61 +18,131 @@ enum Direction {
     Left,
 }
 
-fn get_adjecent(x: usize, y: usize, input: &[Vec<char>]) -> Vec<(Direction, char, (usize, usize))> {
-    let mut adj: Vec<(Direction, char, (usize, usize))> = Vec::new();
+fn get_adjecent(x: usize, y: usize, input: &[Vec<char>]) -> Vec<(Direction, (usize, usize))> {
+    let mut adj: Vec<(Direction, (usize, usize))> = Vec::new();
 
     if x > 0 {
-        adj.push((Direction::Up, input[x - 1][y], (x - 1usize, y)));
+        adj.push((Direction::Up, (x - 1usize, y)));
 
         if y > 0 {
-            adj.push((
-                Direction::UpLeft,
-                input[x - 1][y - 1],
-                (x - 1usize, y - 1usize),
-            ));
+            adj.push((Direction::UpLeft, (x - 1usize, y - 1usize)));
         }
 
         if y < input[x].len() - 1 {
-            adj.push((
-                Direction::UpRight,
-                input[x - 1][y + 1],
-                (x - 1usize, y + 1usize),
-            ));
+            adj.push((Direction::UpRight, (x - 1usize, y + 1usize)));
         }
     }
 
     if y < input[x].len() - 1 {
-        adj.push((Direction::Right, input[x][y + 1], (x, y + 1usize)));
+        adj.push((Direction::Right, (x, y + 1usize)));
     }
 
     if y > 0 {
-        adj.push((Direction::Left, input[x][y - 1], (x, y - 1usize)));
+        adj.push((Direction::Left, (x, y - 1usize)));
     }
 
     if x < input.len() - 1 {
-        adj.push((Direction::Down, input[x + 1][y], (x + 1usize, y)));
+        adj.push((Direction::Down, (x + 1usize, y)));
 
         if y > 0 {
-            adj.push((
-                Direction::DownLeft,
-                input[x + 1][y - 1],
-                (x + 1usize, y - 1usize),
-            ));
+            adj.push((Direction::DownLeft, (x + 1usize, y - 1usize)));
         }
 
         if y < input[x].len() - 1 {
-            adj.push((
-                Direction::DownRight,
-                input[x + 1][y + 1],
-                (x + 1usize, y + 1usize),
-            ));
+            adj.push((Direction::DownRight, (x + 1usize, y + 1usize)));
         }
     }
 
     adj
 }
 
-fn replace_map(input: &mut [Vec<char>]) -> bool {
+fn count_seen_occupied(
+    a: (Direction, (usize, usize)),
+    recursive: bool,
+    input: &[Vec<char>],
+) -> usize {
+    let mut seen = 0;
+    let coordinates = a.1;
+    let (x, y) = coordinates;
+
+    let is_in_bounds = |(dir, (x, y))| -> Option<(Direction, (usize, usize))> {
+        match dir {
+            Direction::UpLeft => {
+                if x == 0 || y == 0 {
+                    return None;
+                }
+
+                return Some((dir, (x - 1, y - 1)));
+            }
+            Direction::Up => {
+                if x == 0 {
+                    return None;
+                }
+
+                return Some((dir, (x - 1, y)));
+            }
+            Direction::UpRight => {
+                if x == 0 || y == input[x as usize].len() - 1 {
+                    return None;
+                }
+
+                return Some((dir, (x - 1, y + 1)));
+            }
+            Direction::Right => {
+                if y == input[x as usize].len() - 1 {
+                    return None;
+                }
+
+                return Some((dir, (x, y + 1)));
+            }
+            Direction::DownRight => {
+                if x == input.len() - 1 || y == input[x as usize].len() - 1 {
+                    return None;
+                }
+
+                return Some((dir, (x + 1, y + 1)));
+            }
+            Direction::Down => {
+                if x == input.len() - 1 {
+                    return None;
+                }
+
+                return Some((dir, (x + 1, y)));
+            }
+            Direction::DownLeft => {
+                if y == 0 || x == input.len() - 1 {
+                    return None;
+                }
+
+                return Some((dir, (x + 1, y - 1)));
+            }
+            Direction::Left => {
+                if y == 0 {
+                    return None;
+                }
+
+                return Some((dir, (x, y - 1)));
+            }
+        }
+    };
+
+    match input[x][y] {
+        '#' => seen += 1,
+        '.' => {
+            if recursive {
+                match is_in_bounds(a) {
+                    Some(v) => seen += count_seen_occupied(v, true, input),
+                    None => (),
+                }
+            }
+        }
+        _ => (),
+    };
+
+    seen
+}
+
+fn update_map(input: &mut [Vec<char>], recursive: bool, seen_limit: usize) -> bool {
     let original = input.to_owned().clone();
     let mut did_change = false;
 
@@ -84,10 +154,8 @@ fn replace_map(input: &mut [Vec<char>]) -> bool {
 
             let adj = get_adjecent(x, y, &original);
             let mut seen_occupied = 0;
-            for (_, t, _) in adj {
-                if t == '#' {
-                    seen_occupied += 1;
-                }
+            for a in adj {
+                seen_occupied += count_seen_occupied(a, recursive, &original);
             }
 
             // If a seat is empty (L) and there are no occupied seats adjacent to it, the seat
@@ -101,7 +169,7 @@ fn replace_map(input: &mut [Vec<char>]) -> bool {
 
             // If a seat is occupied (#) and four or more seats adjacent to it are also occupied,
             // the seat becomes empty.
-            if input[x][y] == '#' && seen_occupied >= 4 {
+            if input[x][y] == '#' && seen_occupied >= seen_limit {
                 input[x][y] = 'L';
 
                 did_change = true;
@@ -120,7 +188,7 @@ fn part_one(input: String) -> i64 {
         .collect();
 
     loop {
-        if !replace_map(&mut original) {
+        if !update_map(&mut original, false, 4) {
             break;
         }
     }
@@ -128,151 +196,6 @@ fn part_one(input: String) -> i64 {
     original.iter().fold(0, |acc, vec| {
         acc + vec.iter().filter(|&&c| c == '#').count() as i64
     })
-}
-
-fn traverse_direction(a: (Direction, char, (usize, usize)), input: &[Vec<char>]) -> usize {
-    let mut seen = 0;
-    let is_in_bounds = |(dir, _, (x, y))| -> Option<(Direction, char, (usize, usize))> {
-        match dir {
-            Direction::UpLeft => {
-                if x == 0 || y == 0 {
-                    return None;
-                }
-
-                let new_x: usize = x - 1;
-                let new_y: usize = y - 1;
-                let new_char = input[new_x][new_y];
-
-                return Some((dir, new_char, (new_x, new_y)));
-            }
-            Direction::Up => {
-                if x == 0 {
-                    return None;
-                }
-
-                let new_x: usize = x - 1;
-                let new_y: usize = y;
-                let new_char = input[new_x][new_y];
-
-                return Some((dir, new_char, (new_x, new_y)));
-            }
-            Direction::UpRight => {
-                if x == 0 || y == input[x as usize].len() - 1 {
-                    return None;
-                }
-
-                let new_x: usize = x - 1;
-                let new_y: usize = y + 1;
-                let new_char = input[new_x][new_y];
-
-                return Some((dir, new_char, (new_x, new_y)));
-            }
-            Direction::Right => {
-                if y == input[x as usize].len() - 1 {
-                    return None;
-                }
-
-                let new_x: usize = x;
-                let new_y: usize = y + 1;
-                let new_char = input[new_x][new_y];
-
-                return Some((dir, new_char, (new_x, new_y)));
-            }
-            Direction::DownRight => {
-                if x == input.len() - 1 || y == input[x as usize].len() - 1 {
-                    return None;
-                }
-
-                let new_x: usize = x + 1;
-                let new_y: usize = y + 1;
-                let new_char = input[new_x][new_y];
-
-                return Some((dir, new_char, (new_x, new_y)));
-            }
-            Direction::Down => {
-                if x == input.len() - 1 {
-                    return None;
-                }
-
-                let new_x: usize = x + 1;
-                let new_y: usize = y;
-                let new_char = input[new_x][new_y];
-
-                return Some((dir, new_char, (new_x, new_y)));
-            }
-            Direction::DownLeft => {
-                if y == 0 || x == input.len() - 1 {
-                    return None;
-                }
-
-                let new_x: usize = x + 1;
-                let new_y: usize = y - 1;
-                let new_char = input[new_x][new_y];
-
-                return Some((dir, new_char, (new_x, new_y)));
-            }
-            Direction::Left => {
-                if y == 0 {
-                    return None;
-                }
-
-                let new_x: usize = x;
-                let new_y: usize = y - 1;
-                let new_char = input[new_x][new_y];
-
-                return Some((dir, new_char, (new_x, new_y)));
-            }
-        }
-    };
-
-    match a.1 {
-        '#' => seen += 1,
-        '.' => match is_in_bounds(a) {
-            Some(x) => seen += traverse_direction(x, input),
-            None => (),
-        },
-        _ => (),
-    };
-
-    seen
-}
-
-fn replace_map_two(input: &mut [Vec<char>]) -> bool {
-    let original = input.to_owned().clone();
-    let mut did_change = false;
-
-    for x in 0..input.len() {
-        for y in 0..input[x].len() {
-            if input[x][y] == '.' {
-                continue;
-            }
-
-            let adj = get_adjecent(x, y, &original);
-            let mut seen_occupied = 0;
-            for a in adj {
-                seen_occupied += traverse_direction(a, &original);
-            }
-
-            // If a seat is empty (L) and there are no occupied seats adjacent to it, the seat
-            // becomes occupied.
-            if input[x][y] == 'L' && seen_occupied == 0 {
-                input[x][y] = '#';
-
-                did_change = true;
-                continue;
-            }
-
-            // If a seat is occupied (#) and four or more seats adjacent to it are also occupied,
-            // the seat becomes empty.
-            if input[x][y] == '#' && seen_occupied >= 5 {
-                input[x][y] = 'L';
-
-                did_change = true;
-            }
-        }
-    }
-
-    did_change
 }
 
 fn part_two(input: String) -> i64 {
@@ -283,7 +206,7 @@ fn part_two(input: String) -> i64 {
         .collect();
 
     loop {
-        if !replace_map_two(&mut original) {
+        if !update_map(&mut original, true, 5) {
             break;
         }
     }
