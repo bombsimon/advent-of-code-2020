@@ -7,6 +7,7 @@ pub fn solve() {
     println!("Solution part 2: {}", part_two(x.clone()));
 }
 
+#[derive(Clone, Copy)]
 enum Direction {
     UpLeft,
     Up,
@@ -18,128 +19,85 @@ enum Direction {
     Left,
 }
 
-fn get_adjecent(x: usize, y: usize, input: &[Vec<char>]) -> Vec<(Direction, (usize, usize))> {
-    let mut adj: Vec<(Direction, (usize, usize))> = Vec::new();
+fn find_adjecent(
+    x: usize,
+    y: usize,
+    directions: &[Direction],
+    input: &[Vec<char>],
+) -> Vec<(Direction, (usize, usize))> {
+    let mut adjecent: Vec<(Direction, (usize, usize))> = Vec::new();
 
-    if x > 0 {
-        adj.push((Direction::Up, (x - 1usize, y)));
-
-        if y > 0 {
-            adj.push((Direction::UpLeft, (x - 1usize, y - 1usize)));
-        }
-
-        if y < input[x].len() - 1 {
-            adj.push((Direction::UpRight, (x - 1usize, y + 1usize)));
+    for direction in directions {
+        match direction {
+            Direction::UpLeft => {
+                if x != 0 && y != 0 {
+                    adjecent.push((Direction::UpLeft, (x - 1, y - 1)));
+                }
+            }
+            Direction::Up => {
+                if x != 0 {
+                    adjecent.push((Direction::Up, (x - 1, y)));
+                }
+            }
+            Direction::UpRight => {
+                if x != 0 && y != input[x as usize].len() - 1 {
+                    adjecent.push((Direction::UpRight, (x - 1, y + 1)));
+                }
+            }
+            Direction::Right => {
+                if y != input[x as usize].len() - 1 {
+                    adjecent.push((Direction::Right, (x, y + 1)));
+                }
+            }
+            Direction::DownRight => {
+                if x != input.len() - 1 && y != input[x as usize].len() - 1 {
+                    adjecent.push((Direction::DownRight, (x + 1, y + 1)));
+                }
+            }
+            Direction::Down => {
+                if x != input.len() - 1 {
+                    adjecent.push((Direction::Down, (x + 1, y)));
+                }
+            }
+            Direction::DownLeft => {
+                if y != 0 && x != input.len() - 1 {
+                    adjecent.push((Direction::DownLeft, (x + 1, y - 1)));
+                }
+            }
+            Direction::Left => {
+                if y != 0 {
+                    adjecent.push((Direction::Left, (x, y - 1)));
+                }
+            }
         }
     }
 
-    if y < input[x].len() - 1 {
-        adj.push((Direction::Right, (x, y + 1usize)));
-    }
-
-    if y > 0 {
-        adj.push((Direction::Left, (x, y - 1usize)));
-    }
-
-    if x < input.len() - 1 {
-        adj.push((Direction::Down, (x + 1usize, y)));
-
-        if y > 0 {
-            adj.push((Direction::DownLeft, (x + 1usize, y - 1usize)));
-        }
-
-        if y < input[x].len() - 1 {
-            adj.push((Direction::DownRight, (x + 1usize, y + 1usize)));
-        }
-    }
-
-    adj
+    adjecent
 }
 
 fn count_seen_occupied(
-    a: (Direction, (usize, usize)),
+    adjecent: (Direction, (usize, usize)),
     recursive: bool,
     input: &[Vec<char>],
 ) -> usize {
-    let mut seen = 0;
-    let coordinates = a.1;
-    let (x, y) = coordinates;
-
-    let is_in_bounds = |(dir, (x, y))| -> Option<(Direction, (usize, usize))> {
-        match dir {
-            Direction::UpLeft => {
-                if x == 0 || y == 0 {
-                    return None;
-                }
-
-                return Some((dir, (x - 1, y - 1)));
-            }
-            Direction::Up => {
-                if x == 0 {
-                    return None;
-                }
-
-                return Some((dir, (x - 1, y)));
-            }
-            Direction::UpRight => {
-                if x == 0 || y == input[x as usize].len() - 1 {
-                    return None;
-                }
-
-                return Some((dir, (x - 1, y + 1)));
-            }
-            Direction::Right => {
-                if y == input[x as usize].len() - 1 {
-                    return None;
-                }
-
-                return Some((dir, (x, y + 1)));
-            }
-            Direction::DownRight => {
-                if x == input.len() - 1 || y == input[x as usize].len() - 1 {
-                    return None;
-                }
-
-                return Some((dir, (x + 1, y + 1)));
-            }
-            Direction::Down => {
-                if x == input.len() - 1 {
-                    return None;
-                }
-
-                return Some((dir, (x + 1, y)));
-            }
-            Direction::DownLeft => {
-                if y == 0 || x == input.len() - 1 {
-                    return None;
-                }
-
-                return Some((dir, (x + 1, y - 1)));
-            }
-            Direction::Left => {
-                if y == 0 {
-                    return None;
-                }
-
-                return Some((dir, (x, y - 1)));
-            }
-        }
-    };
+    let direction = adjecent.0.clone();
+    let (x, y) = adjecent.1;
 
     match input[x][y] {
-        '#' => seen += 1,
+        '#' => 1,
         '.' => {
             if recursive {
-                match is_in_bounds(a) {
-                    Some(v) => seen += count_seen_occupied(v, true, input),
-                    None => (),
+                let adjecent = find_adjecent(x, y, &[direction], input);
+
+                if adjecent.len() == 1 {
+                    return count_seen_occupied(adjecent[0], true, input);
                 }
             }
-        }
-        _ => (),
-    };
 
-    seen
+            0
+        }
+        _ => 0,
+    }
 }
 
 fn update_map(input: &mut [Vec<char>], recursive: bool, seen_limit: usize) -> bool {
@@ -152,7 +110,18 @@ fn update_map(input: &mut [Vec<char>], recursive: bool, seen_limit: usize) -> bo
                 continue;
             }
 
-            let adj = get_adjecent(x, y, &original);
+            let all_directions = vec![
+                Direction::UpLeft,
+                Direction::Up,
+                Direction::UpRight,
+                Direction::Right,
+                Direction::DownRight,
+                Direction::Down,
+                Direction::DownLeft,
+                Direction::Left,
+            ];
+            let adj = find_adjecent(x, y, &all_directions, input);
+
             let mut seen_occupied = 0;
             for a in adj {
                 seen_occupied += count_seen_occupied(a, recursive, &original);
