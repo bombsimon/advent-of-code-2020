@@ -1,10 +1,12 @@
 use crate::input;
 
+use num::Integer;
+
 pub fn solve() {
     let x = input::file_for_day(13).join("\n");
 
     println!("Solution part 1: {}", part_one(x.clone()));
-    println!("Solution part 2: {}", part_two(x.clone(), 10000000000));
+    println!("Solution part 2: {}", part_two(x.clone()));
 }
 
 fn part_one(input: String) -> i64 {
@@ -29,43 +31,59 @@ fn part_one(input: String) -> i64 {
     -1
 }
 
-fn part_two(input: String, min_start: i64) -> i64 {
+// https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm
+fn egcd(n: (i64, i64)) -> (i64, i64, i64) {
+    if n.0 == 0 {
+        (n.1, 0, 1)
+    } else {
+        let (g, x, y) = egcd((n.1 % n.0, n.0));
+        (g, y - (n.1 / n.0) * x, x)
+    }
+}
+
+// https://en.wikipedia.org/wiki/Modular_multiplicative_inverse
+fn mod_inv(n: (i64, i64)) -> i64 {
+    let (_, x, _) = egcd(n);
+
+    (x % n.1 + n.1) % n.1
+}
+
+// https://en.wikipedia.org/wiki/Chinese_remainder_theorem
+fn chinese_remainder_theorem(lines: &[(i64, i64)]) -> i64 {
+    let prod = lines.iter().map(|l| l.1).product::<i64>();
+
+    let mut sum = 0;
+
+    for (residue, modulus) in lines {
+        let p = prod / modulus;
+        sum += residue * mod_inv((p, *modulus)) * p
+    }
+
+    sum % prod
+}
+
+fn part_two(input: String) -> i64 {
     let mut t = -1;
 
-    let mut lines = input
+    let lines = input
         .lines()
         .filter(|&c| c != "")
         .last()
         .unwrap()
         .split(",")
-        .map(|l| {
+        .filter_map(|l| {
             t += 1;
             match l.parse::<i64>() {
-                Ok(n) => (t, n),
-                Err(_) => (t, 0),
+                Ok(n) => Some((t, n)),
+                Err(_) => None,
             }
         })
-        .filter(|&c| c.1 != 0)
         .collect::<Vec<_>>();
 
-    lines.sort_by_key(|k| k.1);
-    lines.reverse();
+    let lcm = lines.iter().fold(1, |acc, (_, v)| acc.lcm(v));
+    let crt = chinese_remainder_theorem(&lines);
 
-    let first = &lines[0];
-    let tail = &lines[1..];
-
-    let mut n = min_start - (min_start % first.1);
-    'outer: loop {
-        n += first.1;
-
-        for (tdiff, line) in tail {
-            if (n + (tdiff - first.0)) % *line != 0 {
-                continue 'outer;
-            }
-        }
-
-        return n - first.0;
-    }
+    lcm - crt
 }
 
 #[cfg(test)]
@@ -95,7 +113,7 @@ mod tests {
         cases.insert("1\n1789,37,47,1889\n", 1202161486);
 
         for (tc, solution) in cases {
-            assert_eq!(super::part_two(tc.to_string(), 1), solution);
+            assert_eq!(super::part_two(tc.to_string()), solution);
         }
     }
 }
