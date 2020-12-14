@@ -1,7 +1,5 @@
 use crate::input;
 
-use num::Integer;
-
 pub fn solve() {
     let x = input::file_for_day(13).join("\n");
 
@@ -56,7 +54,7 @@ fn chinese_remainder_theorem(lines: &[(i64, i64)]) -> i64 {
 
     for (residue, modulus) in lines {
         let p = prod / modulus;
-        sum += residue * mod_inv((p, *modulus)) * p
+        sum += (modulus - residue) * mod_inv((p, *modulus)) * p
     }
 
     sum % prod
@@ -80,10 +78,9 @@ fn part_two(input: String) -> i64 {
         })
         .collect::<Vec<_>>();
 
-    let lcm = lines.iter().fold(1, |acc, (_, v)| acc.lcm(v));
     let crt = chinese_remainder_theorem(&lines);
 
-    lcm - crt
+    crt
 }
 
 #[cfg(test)]
