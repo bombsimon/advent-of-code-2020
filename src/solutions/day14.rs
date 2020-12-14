@@ -1,6 +1,7 @@
 use crate::input;
 
 use regex::Regex;
+use std::collections::HashMap;
 
 pub fn solve() {
     let x = input::file_for_day(14).join("\n");
@@ -38,10 +39,6 @@ fn part_one(input: String) -> i64 {
         })
         .collect::<Vec<_>>();
 
-    println!("{:#?}", x);
-
-    use std::collections::HashMap;
-
     let mut mask = Vec::new();
     let mut data: HashMap<i64, i64> = HashMap::new();
 
@@ -66,8 +63,68 @@ fn part_one(input: String) -> i64 {
     data.iter().fold(0, |acc, (_, v)| acc + v)
 }
 
-fn part_two(_input: String) -> i64 {
-    -1
+fn part_two(input: String) -> i64 {
+    let bit_re = Regex::new(r"^mem\[(\d+)\] = (\d+)$").unwrap();
+
+    let x = input
+        .lines()
+        .filter(|&c| c != "")
+        .map(|l| {
+            if l.starts_with("mask") {
+                (0, l.split(" = ").collect::<Vec<_>>()[1].to_string())
+            } else {
+                let captures = bit_re.captures(l).unwrap();
+                let address = &captures[1].parse::<i64>().unwrap();
+                let value = &captures[2];
+
+                (*address, value.to_string())
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let mut mask = Vec::new();
+    let mut data: HashMap<i64, i64> = HashMap::new();
+
+    for (mem, val) in x.iter() {
+        if *mem == 0 {
+            mask = val
+                .chars()
+                .rev()
+                .enumerate()
+                .map(|(i, v)| (i, v))
+                .collect::<Vec<_>>();
+
+            continue;
+        }
+
+        let mut value = *mem;
+        let mut perm = Vec::new();
+
+        for (pos, n) in mask.iter() {
+            match n {
+                '0' => (),
+                '1' => value |= 1 << pos,
+                _ => perm.push(pos),
+            }
+        }
+
+        let addrs = perm.iter().fold(vec![value], |acc, &pos| {
+            let mut inner = Vec::new();
+
+            for addr in acc {
+                inner.push(addr & !(1 << pos));
+                inner.push(addr | 1 << pos);
+            }
+
+            inner
+        });
+
+        for a in addrs {
+            data.insert(a, val.parse::<i64>().unwrap());
+        }
+    }
+
+    data.iter().fold(0, |acc, (_, v)| acc + v)
 }
 
 #[cfg(test)]
@@ -78,10 +135,15 @@ mem[8] = 11
 mem[7] = 101
 mem[8] = 0
 "#;
-    static TEST_INPUT_TWO: &str = r#""#;
+    static TEST_INPUT_TWO: &str = r#"
+mask = 000000000000000000000000000000X1001X
+mem[42] = 100
+mask = 00000000000000000000000000000000X0XX
+mem[26] = 1
+"#;
 
     static SOLUTION_ONE: i64 = 165;
-    static SOLUTION_TWO: i64 = -1;
+    static SOLUTION_TWO: i64 = 208;
 
     #[test]
     fn part_one() {
