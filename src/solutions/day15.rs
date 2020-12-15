@@ -49,62 +49,49 @@ fn part_one(input: String) -> i32 {
 fn part_two(input: String) -> i64 {
     use std::collections::HashMap;
 
-    let mut register: HashMap<usize, usize> = HashMap::new();
-    let mut speak_map: HashMap<usize, (usize, usize)> = HashMap::new();
-    let mut history = Vec::new();
+    let mut register: HashMap<usize, (usize, usize, usize)> = HashMap::new();
+    let mut last_spoken = 0;
 
-    input
+    let x = input
         .lines()
         .filter(|&c| c != "")
         .next()
         .unwrap()
         .split(",")
         .map(|c| c.parse::<usize>().unwrap())
-        .enumerate()
-        .for_each(|(i, v)| {
-            let old_register = match register.get(&v) {
-                Some(m) => *m,
-                None => 0,
-            };
+        .collect::<Vec<_>>();
 
-            let old_speak_map = match speak_map.get(&v) {
-                Some(m) => m.1,
-                None => 0,
-            };
+    for (i, v) in x.iter().enumerate() {
+        let (count, last_seen) = match register.get(&v) {
+            Some(m) => (m.0, m.2),
+            None => (0, 0),
+        };
 
-            register.insert(v, old_register + 1);
-            speak_map.insert(v, (old_speak_map, i + 1));
-            history.push(v as usize);
-        });
+        register.insert(*v, (count + 1, last_seen, i + 1));
+        last_spoken = *v;
+    }
 
-    for i in history.len() + 1..30000000 + 1usize {
-        let last_spoken = history[history.len() - 1];
+    for i in x.len() + 1..30000000 + 1usize {
         let to_speak: usize;
 
         match register.get(&last_spoken) {
-            Some(1) => to_speak = 0,
-            _ => {
-                let (spoken_1, spoken_2) = speak_map.get(&last_spoken).unwrap();
-                to_speak = spoken_2 - spoken_1;
+            Some((1, _, _)) => to_speak = 0,
+            Some((_, s1, s2)) => {
+                to_speak = s2 - s1;
             }
+            _ => unreachable!(),
         }
 
-        let old_register = match register.get(&to_speak) {
-            Some(m) => *m,
-            None => 0,
+        let (c, s) = match register.get(&to_speak) {
+            Some(m) => (m.0, m.2),
+            None => (0, 0),
         };
 
-        let old_speak_map = match speak_map.get(&to_speak) {
-            Some(m) => m.1,
-            None => 0,
-        };
-
-        register.insert(to_speak, old_register + 1);
-        speak_map.insert(to_speak, (old_speak_map, i));
-        history.push(to_speak);
+        register.insert(to_speak, (c + 1, s, i));
+        last_spoken = to_speak;
     }
 
-    history[history.len() - 1] as i64
+    last_spoken as i64
 }
 
 #[cfg(test)]
