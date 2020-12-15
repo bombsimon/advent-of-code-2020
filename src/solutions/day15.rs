@@ -8,90 +8,54 @@ pub fn solve() {
 }
 
 fn part_one(input: String) -> i32 {
-    let mut register: [i32; 2048] = [0; 2048];
-    let mut speak_map: [(i32, i32); 2048] = [(0, 0); 2048];
-    let mut history = Vec::new();
-
-    input
-        .lines()
-        .filter(|&c| c != "")
-        .next()
-        .unwrap()
-        .split(",")
-        .map(|c| c.parse::<i32>().unwrap())
-        .enumerate()
-        .for_each(|(i, v)| {
-            register[v as usize] += 1;
-            speak_map[v as usize] = (speak_map[i as usize].1, (i + 1) as i32);
-            history.push(v as usize);
-        });
-
-    for i in history.len() + 1..2020 + 1usize {
-        let last_spoken = history[history.len() - 1];
-        let to_speak: usize;
-
-        match register[last_spoken] {
-            1 => to_speak = 0,
-            _ => {
-                let (spoken_1, spoken_2) = speak_map[last_spoken];
-                to_speak = (spoken_2 - spoken_1) as usize;
-            }
-        }
-
-        register[to_speak] += 1;
-        speak_map[to_speak] = (speak_map[to_speak].1, i as i32);
-        history.push(to_speak);
-    }
-
-    history[history.len() - 1] as i32
-}
-
-fn part_two(input: String) -> i64 {
-    use std::collections::HashMap;
-
-    let mut register: HashMap<usize, (usize, usize, usize)> = HashMap::new();
-    let mut last_spoken = 0;
-
     let x = input
         .lines()
         .filter(|&c| c != "")
         .next()
         .unwrap()
         .split(",")
-        .map(|c| c.parse::<usize>().unwrap())
+        .filter_map(|c| c.parse::<usize>().ok())
         .collect::<Vec<_>>();
 
-    for (i, v) in x.iter().enumerate() {
-        let (count, last_seen) = match register.get(&v) {
-            Some(m) => (m.0, m.2),
-            None => (0, 0),
-        };
+    run(&x, 2020)
+}
 
-        register.insert(*v, (count + 1, last_seen, i + 1));
-        last_spoken = *v;
+fn part_two(input: String) -> i32 {
+    let x = input
+        .lines()
+        .filter(|&c| c != "")
+        .next()
+        .unwrap()
+        .split(",")
+        .filter_map(|c| c.parse::<usize>().ok())
+        .collect::<Vec<_>>();
+
+    run(&x, 30_000_000)
+}
+
+fn run(input: &[usize], count: usize) -> i32 {
+    let mut map = vec![None; count];
+
+    for (i, &v) in input.iter().enumerate() {
+        map[v] = Some(i + 1);
     }
 
-    for i in x.len() + 1..30000000 + 1usize {
-        let to_speak: usize;
+    let mut last = *input.last().unwrap();
 
-        match register.get(&last_spoken) {
-            Some((1, _, _)) => to_speak = 0,
-            Some((_, s1, s2)) => {
-                to_speak = s2 - s1;
+    for i in input.len()..count {
+        match map[last] {
+            Some(v) => {
+                map[last] = Some(i);
+                last = i - v;
             }
-            _ => unreachable!(),
+            None => {
+                map[last] = Some(i);
+                last = 0;
+            }
         }
-
-        let (c, s) = match register.get(&to_speak) {
-            Some(m) => (m.0, m.2),
-            None => (0, 0),
-        };
-
-        register.insert(to_speak, (c + 1, s, i));
-        last_spoken = to_speak;
     }
 
-    last_spoken as i64
+    last as i32
 }
 
 #[cfg(test)]
