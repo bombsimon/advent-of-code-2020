@@ -34,28 +34,25 @@ fn part_two(input: String) -> i32 {
 }
 
 fn run(input: &[usize], count: usize) -> i32 {
-    let mut map = vec![None; count];
+    let mut map = vec![0; count];
+    let mut last_spoken = 0;
 
-    for (i, &v) in input.iter().enumerate() {
-        map[v] = Some(i + 1);
+    for (turn, &spoken) in input.iter().enumerate() {
+        map[spoken] = turn + 1;
+        last_spoken = turn + 1;
     }
 
-    let mut last = *input.last().unwrap();
+    for turn in input.len()..count {
+        let to_speak = match map[last_spoken] {
+            0 => 0,
+            last_spoken_at => turn - last_spoken_at,
+        };
 
-    for i in input.len()..count {
-        match map[last] {
-            Some(v) => {
-                map[last] = Some(i);
-                last = i - v;
-            }
-            None => {
-                map[last] = Some(i);
-                last = 0;
-            }
-        }
+        map[last_spoken] = turn;
+        last_spoken = to_speak;
     }
 
-    last as i32
+    last_spoken as i32
 }
 
 #[cfg(test)]
