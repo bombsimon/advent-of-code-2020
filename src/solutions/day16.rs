@@ -1,5 +1,7 @@
 use crate::input;
 
+use std::collections::HashMap;
+
 pub fn solve() {
     let x = input::file_for_day(16).join("\n");
 
@@ -7,7 +9,7 @@ pub fn solve() {
     println!("Solution part 2: {}", part_two(x.clone()));
 }
 
-fn parse_input(input: String) -> (Vec<Vec<(i32, i32)>>, Vec<i32>, Vec<Vec<i32>>) {
+fn parse_input(input: String) -> (Vec<Vec<(String, (i32, i32))>>, Vec<i32>, Vec<Vec<i32>>) {
     let ref mut x = input
         .split("\n\n")
         .map(|l| l.trim().split("\n").collect::<Vec<_>>());
@@ -16,7 +18,9 @@ fn parse_input(input: String) -> (Vec<Vec<(i32, i32)>>, Vec<i32>, Vec<Vec<i32>>)
     let rules = rules_raw
         .iter()
         .map(|c| {
-            c.split(": ").collect::<Vec<_>>()[1]
+            let rules = c.split(": ").collect::<Vec<_>>();
+            let typ = rules[0].to_string();
+            let range = rules[1]
                 .split(" or ")
                 .map(|n| {
                     let range = n
@@ -24,9 +28,11 @@ fn parse_input(input: String) -> (Vec<Vec<(i32, i32)>>, Vec<i32>, Vec<Vec<i32>>)
                         .map(|i| i.parse::<i32>().unwrap())
                         .collect::<Vec<_>>();
 
-                    (range[0], range[1])
+                    (typ.clone(), (range[0], range[1]))
                 })
-                .collect::<Vec<_>>()
+                .collect::<Vec<_>>();
+
+            range
         })
         .collect::<Vec<_>>();
 
@@ -49,29 +55,108 @@ fn parse_input(input: String) -> (Vec<Vec<(i32, i32)>>, Vec<i32>, Vec<Vec<i32>>)
     (rules, mine, nearby)
 }
 
-fn part_one(input: String) -> i32 {
+fn part_one(input: String) -> i64 {
     let (rules, _, nearby) = parse_input(input);
-    let mut invalid_number = 0;
+    let mut invalid_number = 0i64;
 
     for ticket in &nearby {
         'number: for number in ticket {
             for rule in &rules {
                 for rule_range in rule {
-                    if *number >= rule_range.0 && *number <= rule_range.1 {
+                    if *number >= rule_range.1 .0 && *number <= rule_range.1 .1 {
                         continue 'number;
                     }
                 }
             }
 
-            invalid_number += number;
+            invalid_number += *number as i64;
         }
     }
 
     invalid_number
 }
 
-fn part_two(_input: String) -> i32 {
-    -1
+fn rule_valid(rules: &[(String, (i32, i32))], tickets: &[Vec<i32>], candidate: usize) -> bool {
+    'ticket: for ticket in tickets {
+        let n = ticket[candidate];
+
+        for rule_range in rules {
+            if n >= rule_range.1 .0 && n <= rule_range.1 .1 {
+                continue 'ticket;
+            }
+        }
+
+        return false;
+    }
+
+    true
+}
+
+fn part_two(input: String) -> i64 {
+    let (all_rules, mine, nearby) = parse_input(input);
+
+    let mut filtered = Vec::new();
+
+    'ticket: for ticket in &nearby {
+        'number: for number in ticket {
+            for rule in &all_rules {
+                for rule_range in rule {
+                    if *number >= rule_range.1 .0 && *number <= rule_range.1 .1 {
+                        continue 'number;
+                    }
+                }
+            }
+
+            continue 'ticket;
+        }
+
+        filtered.push(ticket.clone());
+    }
+
+    filtered.push(mine.clone());
+
+    let mut hr: HashMap<String, usize> = HashMap::new();
+    let mut hn: HashMap<usize, String> = HashMap::new();
+
+    while hr.len() < mine.len() {
+        let mut ht: HashMap<usize, Vec<String>> = HashMap::new();
+
+        for rules in all_rules.iter() {
+            if hr.contains_key(&rules[0].0) {
+                continue;
+            }
+
+            for i in 0..mine.len() {
+                let mut vec = match ht.get(&i) {
+                    Some(v) => v.clone(),
+                    None => Vec::new(),
+                };
+
+                if hn.contains_key(&i) {
+                    continue;
+                }
+
+                if rule_valid(&rules, filtered.as_slice(), i) {
+                    vec.push(rules[0].0.clone());
+                    ht.insert(i, vec);
+                }
+            }
+        }
+
+        for (i, rule) in &ht {
+            if rule.len() == 1 {
+                hn.insert(*i, rule[0].clone());
+                hr.insert(rule[0].clone(), *i);
+            }
+        }
+    }
+
+    hr.iter().fold(1, |acc, (k, &i)| {
+        if !k.as_str().starts_with("departure") {
+            return acc;
+        }
+        acc * mine[i] as i64
+    })
 }
 
 #[cfg(test)]
@@ -104,8 +189,8 @@ nearby tickets:
 5,14,9
 "#;
 
-    static SOLUTION_ONE: i32 = 71;
-    static SOLUTION_TWO: i32 = -1;
+    static SOLUTION_ONE: i64 = 71;
+    static SOLUTION_TWO: i64 = 1;
 
     #[test]
     fn part_one() {
