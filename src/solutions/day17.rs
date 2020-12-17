@@ -2,6 +2,9 @@ use std::collections::HashMap;
 
 use crate::{grid, input};
 
+// TODO: We're counting neighbors way to often, that should be fixed and dramatically reduce time.
+// We should also be able to not have to pre-populate the outer layer before each cycle, that's
+// just a dirty workaround. If we can skip this that would also reduce a lot of time.
 pub fn solve() {
     let x = input::file_for_day(17).join("\n");
 
@@ -72,6 +75,8 @@ fn part_one(input: String) -> i64 {
 }
 
 fn part_two(input: String) -> i64 {
+    // TODO: Would probably make sense to use a different data structure than this custom cube with
+    // not that great multi dimension support.
     let mut cube_map: HashMap<grid::CubeN, char> = HashMap::new();
     for (x, line) in input.lines().filter(|&c| c != "").enumerate() {
         for (y, value) in line.chars().enumerate() {
@@ -88,6 +93,9 @@ fn part_two(input: String) -> i64 {
     }
 
     for _ in 1..=6 {
+        // TODO: This whole paragraph should be skipped. We shouldn't have to get ALL neighbors
+        // before we even iterate to check for visible neighbors. And even if we did, we don't have
+        // to get neighbors for anything but the outer most layer.
         let mut prefilled = cube_map.clone();
         for (cube, v) in &cube_map {
             prefilled.insert(cube.clone(), *v);
