@@ -63,32 +63,45 @@ impl Direction {
     }
 }
 
-#[derive(Clone, Debug, Hash)]
-pub struct Cube {
+#[derive(Clone, Debug, Hash, PartialEq)]
+pub struct CubeN {
     pub x: i32,
     pub y: i32,
     pub z: i32,
+    pub w: Option<i32>,
 }
 
-impl PartialEq for Cube {
-    fn eq(&self, other: &Self) -> bool {
-        self.x == other.x && self.y == other.y && self.z == other.z
-    }
-}
+impl Eq for CubeN {}
 
-impl Eq for Cube {}
-
-impl Cube {
-    pub fn neighbors(&self) -> Vec<Cube> {
+impl CubeN {
+    pub fn neighbors(&self) -> Vec<CubeN> {
         let mut n = Vec::new();
         for x in self.x - 1..=self.x + 1 {
             for y in self.y - 1..=self.y + 1 {
                 for z in self.z - 1..=self.z + 1 {
-                    if self.x == x && self.y == y && self.z == z {
-                        continue;
-                    }
+                    match self.w {
+                        Some(w) => {
+                            for w in w - 1..=w + 1 {
+                                if self.x == x && self.y == y && self.z == z && self.w == Some(w) {
+                                    continue;
+                                }
 
-                    n.push(Cube { x, y, z });
+                                n.push(CubeN {
+                                    x,
+                                    y,
+                                    z,
+                                    w: Some(w),
+                                });
+                            }
+                        }
+                        None => {
+                            if self.x == x && self.y == y && self.z == z {
+                                continue;
+                            }
+
+                            n.push(CubeN { x, y, z, w: None });
+                        }
+                    };
                 }
             }
         }
