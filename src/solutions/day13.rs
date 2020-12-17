@@ -61,26 +61,20 @@ fn chinese_remainder_theorem(lines: &[(i64, i64)]) -> i64 {
 }
 
 fn part_two(input: String) -> i64 {
-    let mut t = -1;
-
     let lines = input
         .lines()
         .filter(|&c| c != "")
         .last()
         .unwrap()
         .split(",")
-        .filter_map(|l| {
-            t += 1;
-            match l.parse::<i64>() {
-                Ok(n) => Some((t, n)),
-                Err(_) => None,
-            }
+        .enumerate()
+        .filter_map(|(i, l)| match l.parse::<i64>() {
+            Ok(n) => Some((i as i64, n)),
+            Err(_) => None,
         })
         .collect::<Vec<_>>();
 
-    let crt = chinese_remainder_theorem(&lines);
-
-    crt
+    chinese_remainder_theorem(&lines)
 }
 
 #[cfg(test)]
