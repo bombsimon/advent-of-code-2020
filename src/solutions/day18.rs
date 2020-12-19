@@ -9,26 +9,45 @@ pub fn solve() {
     println!("Solution part 2: {}", part_two(x.clone()));
 }
 
-fn parse_expression(exp: String) -> i64 {
-    let mut parens: Vec<usize> = Vec::with_capacity(exp.len());
-    let mut parens_map: HashMap<usize, usize> = HashMap::new();
+fn part_one(input: String) -> i64 {
+    input.lines().filter(|&c| c != "").fold(0, |acc, item| {
+        acc + parse_expression(item.to_string(), false)
+    })
+}
+
+fn part_two(input: String) -> i64 {
+    input.lines().filter(|&c| c != "").fold(0, |acc, item| {
+        acc + parse_expression(item.to_string(), true)
+    })
+}
+
+fn parse_expression(exp: String, addition_first: bool) -> i64 {
+    let mut parentheses: Vec<usize> = Vec::with_capacity(exp.len());
+    let mut parentheses_map: HashMap<usize, usize> = HashMap::new();
 
     for (i, c) in exp.chars().enumerate() {
         match c {
-            '(' => parens.push(i),
+            '(' => parentheses.push(i),
             ')' => {
-                let matching_paren = parens[parens.len() - 1];
-                parens = parens[..parens.len() - 1].to_vec();
-                parens_map.insert(matching_paren, i);
+                let matching_parentheses = parentheses[parentheses.len() - 1];
+                parentheses = parentheses[..parentheses.len() - 1].to_vec();
+                parentheses_map.insert(matching_parentheses, i);
             }
             _ => continue,
         }
     }
 
-    simplify(exp, 0usize, &parens_map).parse::<i64>().unwrap()
+    simplify(exp, 0usize, &parentheses_map, addition_first)
+        .parse::<i64>()
+        .unwrap()
 }
 
-fn simplify(to_simplify: String, paren_shift: usize, parens_map: &HashMap<usize, usize>) -> String {
+fn simplify(
+    to_simplify: String,
+    parentheses_shift: usize,
+    parentheses_map: &HashMap<usize, usize>,
+    addition_first: bool,
+) -> String {
     let mut s = String::new();
     let mut i = 0;
     let chars = to_simplify.chars().collect::<Vec<_>>();
@@ -38,15 +57,23 @@ fn simplify(to_simplify: String, paren_shift: usize, parens_map: &HashMap<usize,
 
         match c {
             '(' => {
-                let paren_i = i + paren_shift; // Needed to find in map
-                let block = &chars[i + 1..parens_map[&paren_i] - paren_shift]
+                // Since this method is called recursive, we need to know how much of the string
+                // length is cut off so we can properly find parenthesis and their matching friend
+                // in the lookup map.
+                let parentheses_i = i + parentheses_shift;
+                let block = &chars[i + 1..parentheses_map[&parentheses_i] - parentheses_shift]
                     .iter()
                     .collect::<String>();
 
-                let simplified = simplify(block.to_string(), paren_shift + i + 1, parens_map);
+                let simplified = simplify(
+                    block.to_string(),
+                    parentheses_shift + i + 1,
+                    parentheses_map,
+                    addition_first,
+                );
 
                 s.push_str(&simplified);
-                i = parens_map[&paren_i] - paren_shift;
+                i = parentheses_map[&parentheses_i] - parentheses_shift;
             }
             ')' => (),
             _ => s.push(c),
@@ -55,7 +82,41 @@ fn simplify(to_simplify: String, paren_shift: usize, parens_map: &HashMap<usize,
         i += 1;
     }
 
-    left_to_right(s).to_string()
+    if addition_first {
+        with_addition_precedence(s).to_string()
+    } else {
+        left_to_right(s).to_string()
+    }
+}
+
+fn with_addition_precedence(exp: String) -> i64 {
+    let mut tokens = exp
+        .split_whitespace()
+        .map(|c| c.to_string())
+        .collect::<Vec<_>>();
+
+    let mut i = 0;
+    while i < tokens.len() {
+        if tokens.len() < 3 || i >= tokens.len() - 2 {
+            break;
+        }
+
+        let token = tokens[i].parse::<i64>().unwrap();
+        let op = &tokens[i + 1];
+        let next = tokens[i + 2].parse::<i64>().unwrap();
+
+        match op.as_str() {
+            "+" => {
+                let mut n = tokens[..i].to_vec();
+                n.push((token + next).to_string());
+                n.extend_from_slice(&tokens[i + 3..]);
+                tokens = n.clone();
+            }
+            _ => i += 2,
+        }
+    }
+
+    left_to_right(tokens.join(" "))
 }
 
 fn left_to_right(exp: String) -> i64 {
@@ -69,7 +130,7 @@ fn left_to_right(exp: String) -> i64 {
             sum = token;
         }
 
-        if i >= tokens.len() - 2 {
+        if tokens.len() < 3 || i >= tokens.len() - 2 {
             break;
         }
 
@@ -86,17 +147,6 @@ fn left_to_right(exp: String) -> i64 {
     }
 
     sum
-}
-
-fn part_one(input: String) -> i64 {
-    input
-        .lines()
-        .filter(|&c| c != "")
-        .fold(0, |acc, item| acc + parse_expression(item.to_string()))
-}
-
-fn part_two(_input: String) -> i64 {
-    -1
 }
 
 #[cfg(test)]
@@ -119,7 +169,13 @@ mod tests {
 
     #[test]
     fn part_two() {
-        let cases: Vec<(String, i64)> = Vec::new();
+        let cases = vec![
+            ("1 + (2 * 3) + (4 * (5 + 6))", 51),
+            ("2 * 3 + (4 * 5)", 46),
+            ("5 + (8 * 3 + 9 + 3 * 4 * 3)", 1445),
+            ("5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))", 669060),
+            ("((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2", 23340),
+        ];
 
         for (tc, result) in cases {
             assert_eq!(super::part_two(tc.to_string()), result);
